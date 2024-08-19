@@ -76,7 +76,15 @@ uint64_t GetTimestamp(uint8_t index)
         // Values are 32bit, maximum is 2^32-1 => always correct
         uint32_t tmp = value - timestampArray[index].InitialValue;
         timestamp = tmp;
-        timestamp += (uint64_t) timestampArray[index].OverflowCounter * (TIMESTAMP_COUNTER_MAX + 1);
+        uint32_t cnt = timestampArray[index].OverflowCounter;
+        if (value < timestampArray[index].InitialValue)
+        {
+            if (cnt > 0)
+            {
+                --cnt;
+            }
+        }
+        timestamp += cnt * ((uint64_t) TIMESTAMP_COUNTER_MAX + 1);
 
     }
     return timestamp;

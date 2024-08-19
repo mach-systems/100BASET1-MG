@@ -709,7 +709,7 @@ uint8_t loopbackStateMachine(uint8_t byteReceived)
     linTransmittionPending = 0;
     if (LinSettings.DeviceMode == LIN_MODE_SLAVE) /* Slave error - bus collision */
     {
-      LinErrorCallback(SlaveResponse[slaveResponseIndex].LinID, PROTOCOL_ERR_LIN_BUS_COLLISION);
+      LinErrorCallback(SlaveResponse[slaveResponseIndex].LinID, PROTOCOL_ERR_LIN_BUS_ERROR);
       resetSlaveLoopbackControl();
       restartLinUart = 1;
     }
@@ -717,7 +717,7 @@ uint8_t loopbackStateMachine(uint8_t byteReceived)
     {
       /* We haven't received what we sent, skip the packet */
       resetStateMachine();
-      LinErrorCallback(SlaveResponse[slaveResponseIndex].LinID, PROTOCOL_ERR_LIN_BUS_COLLISION); /* Report bus error */
+      LinErrorCallback(SlaveResponse[slaveResponseIndex].LinID, PROTOCOL_ERR_LIN_BUS_ERROR); /* Report bus error */
     }
 
     if (LinReadIndex != LinWriteIndex)

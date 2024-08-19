@@ -54,6 +54,7 @@
 #include "NXP_SJA1105P_config.h"
 #include "NXP_SJA1105P_switchCore.h"
 #include "NXP_SJA1105P_addressResolutionTable.h"
+#include "main.h"
 
 /******************************************************************************
 * Defines
@@ -346,7 +347,7 @@ static uint8_t findEntryIndex(SJA1105P_addressResolutionTableEntry_t *p_addressR
 *
 * \return uint8_t: Returns 0 on success, else failed.
 */
-static uint8_t findFreeEntry(uint16_t *p_freeEntryIndex, uint8_t switchId)
+static __attribute__((unused)) uint8_t findFreeEntry(uint16_t *p_freeEntryIndex, uint8_t switchId)
 {
 	uint8_t ret = 0;
 	uint16_t entryIndex;

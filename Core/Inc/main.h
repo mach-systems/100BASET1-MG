@@ -241,8 +241,6 @@ void SPI_TransferError_Callback(SPI_TypeDef *spi);
 #define DEFAULT_SET_GPIO_Port GPIOD
 #define ETH_BOOT_Pin GPIO_PIN_10
 #define ETH_BOOT_GPIO_Port GPIOD
-#define EEPROM_WP_Pin GPIO_PIN_11
-#define EEPROM_WP_GPIO_Port GPIOD
 #define DIP0_Pin GPIO_PIN_12
 #define DIP0_GPIO_Port GPIOD
 #define DIP1_Pin GPIO_PIN_13

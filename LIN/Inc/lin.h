@@ -52,7 +52,7 @@
 
 /* LIN errors */
 #define PROTOCOL_ERR_LIN_CHECKSUM           0xB0    /* Bad checksum received */
-#define PROTOCOL_ERR_LIN_BUS_COLLISION      0xB1    /* Loopback control failed - probably bus collision */
+#define PROTOCOL_ERR_LIN_BUS_ERROR      0xB1    /* Loopback control failed - probably bus collision */
 #define PROTOCOL_ERR_LIN_TIMEOUT_OVERRUN    0xB2    /* Some timer overran */
 #define PROTOCOL_ERR_LIN_BUFFER_FULL        0xB3    /* Buffer for slave messages is full */
 #define PROTOCOL_ERR_LIN_DATA_TOO_LONG      0xB4    /* Message with more than 8B arrived */

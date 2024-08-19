@@ -476,6 +476,8 @@ static void checkActivityOnChannel(uint32_t tjaAddr){
                 pinTx = DETTX1_Pin;
                 break;
             default:
+                pinRx = DETRX0_Pin;
+                pinTx = DETTX0_Pin;
                 break;
         }
 

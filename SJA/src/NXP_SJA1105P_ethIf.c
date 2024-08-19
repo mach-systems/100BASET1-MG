@@ -52,7 +52,7 @@
 *****************************************************************************/
 
 #include "typedefs.h"
-
+#include "main.h"
 #include "NXP_SJA1105P_config.h"
 #include "NXP_SJA1105P_ethIf.h"
 #include "NXP_SJA1105P_ptp.h"
@@ -276,7 +276,8 @@ extern void SJA1105P_registerFrameRecvCB(SJA1105P_recvFrame_cb_t pf_recvFrame_cb
 extern uint8_t SJA1105P_forwardRecvFrames(void)
 {
 	uint8_t ret = 1;
-	uint8_t i;
+	uint8_t i = 0;
+	UNUSED(i);
 	uint16_t len;
 	uint8_t *p_frameBuf = NULL;
 	SJA1105P_frameDescriptor_t *p_recvFrameDescriptor = NULL;
@@ -556,8 +557,9 @@ extern uint8_t SJA1105P_initEndPointEthIf(uint64_t macAddress)
 {
 	uint8_t ret = 0;
 	SJA1105P_addressResolutionTableEntry_t arlEntry;
-	SJA1105P_port_t physicalPort;
-	uint8_t hostPort;  /* logical index of the host port */
+	SJA1105P_port_t physicalPort = {};
+	UNUSED(physicalPort);
+	uint8_t hostPort = 0;  /* logical index of the host port */
 
 	if (g_endPointIfActive == 0U)
 	{
@@ -951,10 +953,12 @@ static uint8_t forwardTrappedFrame(const metaData_t *kp_metaData, trapInformatio
 {
 	uint8_t ret = 0;
 	uint8_t i;
-	uint32_t timestampCorrection;
-	SJA1105P_portStatusMiixArgument_t portStatus;
-	uint16_t speed;  /* [Gbps] speed of the port */
-
+	uint32_t timestampCorrection = 0;
+	SJA1105P_portStatusMiixArgument_t portStatus = {};
+	uint16_t speed = 0;  /* [Gbps] speed of the port */
+	UNUSED(timestampCorrection);
+	UNUSED(portStatus);
+	UNUSED(speed);
 	if (p_trapInformation->inclSrcPort == 1U)
 	{  /* The DST MAC has to be corrected */
 		correctDstMac(kp_metaData->origDstMacAddressByte1And2, p_frameBuf);

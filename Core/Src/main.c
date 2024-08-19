@@ -1499,7 +1499,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LED_RJ45_KG_GPIO_Port, LED_RJ45_KG_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, DBG0_Pin|EEPROM_WP_Pin|SWITCH_CS_Pin|EWAKE_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, DBG0_Pin|SWITCH_CS_Pin|EWAKE_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOG, LED26_Pin|LED27_Pin|LED23_Pin|LED24_Pin
@@ -1581,8 +1581,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DBG0_Pin EEPROM_WP_Pin SWITCH_CS_Pin EWAKE_Pin */
-  GPIO_InitStruct.Pin = DBG0_Pin|EEPROM_WP_Pin|SWITCH_CS_Pin|EWAKE_Pin;
+  /*Configure GPIO pins : DBG0_Pin SWITCH_CS_Pin EWAKE_Pin */
+  GPIO_InitStruct.Pin = DBG0_Pin|SWITCH_CS_Pin|EWAKE_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -1678,7 +1678,7 @@ void UsbProtocolTaskRx(void* arg)
     /* Get received data from queue */
     while ((queueState = osMessageQueueGet(UsbRxQueueHandle, &usbRxBuffer, NULL, 0xffff)) != osOK);
     uint16_t length = usbRxBuffer.Datalen > MAX_CMD_LEN ? MAX_CMD_LEN : usbRxBuffer.Datalen;
-
+    UNUSED(length);
   }
 }
 

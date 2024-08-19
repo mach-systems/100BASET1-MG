@@ -48,11 +48,7 @@ static int32_t FS_CreateFile(uint16_t cnt);
 static int32_t FS_CloseFile(void);
 static FRESULT FS_Mount(void);
 static void SD_Init(void);
-/*
-* Reinitialize the SD card after removal/insertion. Unlink and link must be
-* called in order to reset the SDMMC peripheral.
-*/
-static uint8_t SD_Reinit(void);
+
 /*
 * Check that first three characters (if filename is longer than 3) are "log"
 */
@@ -318,11 +314,11 @@ void MX_FATFS_Process(void)
 /**
  * @retval Not compatible with FRESULT.
  */
-static int32_t FS_FileOperations(void)
+static  int32_t __attribute__((unused)) FS_FileOperations(void)
 {
   FRESULT res; /* FatFs function common result code */
   uint32_t byteswritten; /* File write/read counts */
-  uint16_t dataToWriteSize;
+  uint16_t dataToWriteSize = 0;
   uint8_t* dataToWrite = 0;
   int8_t returnVal = 0;
 
@@ -606,24 +602,6 @@ static void SD_Init(void)
   }
 }
 
-/*static uint8_t SD_Reinit(void)
-{
-    uint8_t ret = 0;
-    retSD = FATFS_UnLinkDriver(SDPath);
-    // TODO: what from this is needed?
-    HAL_SD_DeInit(&hsd1);
-    memset(&SDFatFS, 0, sizeof(SDFatFS));
-    if (0 == retSD)
-    {
-        retSD = FATFS_LinkDriver(&SD_Driver, SDPath);
-        FRESULT res = f_mount(&SDFatFs, SDPath, 1);
-        if (0 == retSD && FR_OK == res)
-            ret = 1;
-        else if (FR_NOT_READY == res)
-            ret = 2;
-    }
-    return ret;
-}*/
 
 FS_FileOperationsTypeDef SD_GetState(void)
 {
