@@ -29,7 +29,7 @@
 
 #define EE_TIMEOUT          (3000000 / 166) /* Timeout 6 ms when reading status register (Twc) */
 #define EEPROM_TIMEOUT_CNT  500U            /* Wait this many timer ticks when waiting for EEPROM idle */
-/*#define EEPROM_DELAY_CNT    5*/               /* Minimum delay after CS = 1 is 50 ns */
+#define EEPROM_DELAY_CNT    5              /* Minimum delay after CS = 1 is 50 ns */
 
 /* Minimal CS pin timings - values for Vdd 3.3 V */
 #define EE_CS_SETUP           0 /* CS low before the transaction - 150 ns*/
@@ -80,6 +80,13 @@ static void eeDelay(uint16_t time)
     {
         i++;
     }
+}
+
+void EepromInit(void)
+{
+    (void) EEPROMWait();
+    (void) EEPROMReadStatus(NULL, NULL);
+    (void) EEPROMWait();
 }
 
 int8_t EEPROMReadStatus(uint8_t* st, void (*callback)(int16_t))
@@ -144,6 +151,7 @@ int8_t EEPROMWait(void)
             HAL_Delay(1);
         }
         ++timeoutCnt;
+        WDG_REFRESH();
     }
     if (timeoutCnt >= EEPROM_TIMEOUT_CNT)
     {

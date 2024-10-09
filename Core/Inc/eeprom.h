@@ -27,6 +27,12 @@ typedef enum
     EeEraseWait = 7,    /* Waiting until erasing is done */
 } EeOperation;
 
+/**
+ * Initialize EEPROM by dummy read.
+ * @param  None
+ * @retval None
+ */
+void EepromInit(void);
 
 /*
  * Read the EEPROM status register.
@@ -72,4 +78,7 @@ uint8_t EepromSpiCallback(void);
  * Debug function, not to be used normally.
  */
 void TestEepromAccess(void);
+
+
+
 #endif /* INC_EEPROM_H_ */

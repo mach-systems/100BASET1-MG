@@ -651,6 +651,7 @@ uint8_t CanSendMessage(CanMessageStruct *message)
                     if (HAL_FDCAN_ERROR_FIFO_FULL == (canProp->CanHandler)->ErrorCode)
                     {
                         /* Message for CAN gateway send the buffer full here with this format*/
+                        ret = CAN_ERROR_FIFO_FULL;
 
                     }
                     canProp->counterCanBlinkRed = 1;
@@ -727,7 +728,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
             RxMessageToFormat(&RxHeader, RxData, &message, channel);
             message.TimeStamp = ts; // Take the earliest time stamp we have
 
-            uint8_t datalen = DLCtoBytes[RxHeader.DataLength >> 16];
+            uint8_t datalen = DLCtoBytes[RxHeader.DataLength];
 
             /* It is strongly suggested to keep the possibility to jump to System Booloader from application */
             if (RxHeader.Identifier == 0x1fffffff && datalen == 4 && RxData[0] == 0
@@ -916,7 +917,7 @@ void RxMessageToFormat(FDCAN_RxHeaderTypeDef *pRxHeader, uint8_t pRxData[],
     pMessage->BRS = pRxHeader->BitRateSwitch != FDCAN_BRS_OFF;
     pMessage->ESI = pRxHeader->ErrorStateIndicator != FDCAN_ESI_ACTIVE;
     pMessage->FDF = pRxHeader->FDFormat != FDCAN_CLASSIC_CAN;
-    pMessage->DLC = DLCtoBytes[pRxHeader->DataLength >> 16];
+    pMessage->DLC = DLCtoBytes[pRxHeader->DataLength];
     pMessage->Data = pRxData;
     pMessage->TimeStamp = CanGetTimestamp(channel);
 }
@@ -1320,7 +1321,7 @@ void TxMessageToFormat(FDCAN_TxEventFifoTypeDef *pTxHeader, uint8_t* pTxData,
     pMessage->BRS = pTxHeader->BitRateSwitch != FDCAN_BRS_OFF;
     pMessage->ESI = pTxHeader->ErrorStateIndicator != FDCAN_ESI_ACTIVE;
     pMessage->FDF = pTxHeader->FDFormat != FDCAN_CLASSIC_CAN;
-    pMessage->DLC = DLCtoBytes[pTxHeader->DataLength >> 16];
+    pMessage->DLC = DLCtoBytes[pTxHeader->DataLength];
     pMessage->Data = pTxData;
     pMessage->TimeStamp = CanGetTimestamp(channel);
 }
@@ -1378,3 +1379,27 @@ void enableLedCan(uint8_t chanChannel, LedColor color, LedState status)
     }
 }
 
+void SendToCan(uint8_t* pData, uint16_t length)
+{
+  uint8_t retCode=0;
+  for (int i = 0; i < length; i+=8)
+  {
+    CanMessageStruct message;
+    message.BRS = false;
+    message.CANChannel  = CAN1_NUM;
+    message.DLC = (length-i) > 8 ? 8 : (length-i);
+    message.Data  = &pData[i];
+    message.ESI = false;
+    message.EXTId = false;
+    message.FDF = false;
+    message.Id  = 0x11;
+    message.RTR = false;
+    retCode = CanSendMessage(&message);
+    while (retCode == CAN_ERROR_FIFO_FULL)
+    {
+        osDelay(10);
+        retCode = CanSendMessage(&message);
+    }
+  }
+  return;
+}

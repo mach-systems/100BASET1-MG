@@ -17,11 +17,37 @@
   */
 
 /*
+ *  * Product: MACH ETH
+ *
+ * Company: MACH SYSTEMS s.r.o.
+ * Company web: www.machsystems.cz
+ *
+ * Product description:
+ * 3x 100BASE-T1 port
+ * 1x 1000BASE-T port (gigabit Ethernet)
+ * All Ethernet ports are „switched“ (including the MCU)
+ * 2x CAN(/FD)
+ * LIN bus
+ * USB 2.0
+ * MicroSD card slot
+ * 2x Digital output (1x high-side 5V/0.5A, 1x low-side 40V/1A)
+ * 2x Analogue input (0-30 V)
+ * Embedded web server for configuration and status information
+ * User-programmable MCU (C language SDK available free-of-charge)
+ * Use-cases:
+ *  * Configurable Automotive Ethernet switch
+ *  * Active TAP (frame forwarding/sniffing)
+ *  * Gateway between Ethernet, CAN(/FD), LIN
+ *  * User-programmable gateway / simulator
+ *
+ * MCU: STM32H723ZGT
+ * IDE: STM32CubeIDE v1.16.1
+ * HAL: STM32Cube FW_H7 V1.11.2
  *
  * Connector pinout of the device:
  * ===============================
  * Connector X1 (D-SUB Male):
- *   - 1 DO_2
+ *   - 1 DO_2 HS switch (5V/1A)
  *   - 2 CAN1 L
  *   - 3 GND
  *   - 4 CAN2 L
@@ -40,7 +66,7 @@
  *   - 6 T1_3_P
  *   - 7 T1_3_N
  *   - 8 AI_1 (0-30V)
- *   - 9 DO_1
+ *   - 9 DO_1 LS switch (35V/1A)
  *
  * SJA PORTS PHYSICAL (first is 1):
  *      MCU_PORT ...... 1
@@ -109,6 +135,37 @@
  *      UDP: osStatus_t UdpEnqueueResponse(uint8_t* pData, uint16_t length);
  *      CAN: uint8_t CanSendMessage(CanMessageStruct *message);
  *
+ *  * CAN-FD:
+ *  Default setting for CAN is 500k, 2M, SP = 80 %.
+ *  Everything received on CAN is sent to USB, UDP and to TCP connection (if there
+ *  is).
+ *
+ *  * Bootloader:
+ * CAN frame with extended frame ID 0x1fffffff and first four data bytes 0x00
+ * 0x01 0x02 0x03 (on CAN1 or CAN2) will reset the device to HTTP bootloader. Also
+ * shorting the ETH_B and GND pins cause entering the bootloader.
+ * If you then connect to the device via Ethernet and connect from web browser
+ * (Google Chrome recommended), you can upload new firmware to the device. If
+ * the binary is built as without bootloader, device will reset to System
+ * Bootloader. If you then connect USB cable, you can upload new firmware. See
+ * below for build possibilities. Furthermore, see manual for more info.
+ *
+ *  * Virtual COM Port:
+ * If there is anything received, there is a frame transmitted on CAN1.
+ *
+ *  * EEPROM:
+ * There is running an EEPROM emulation in flash. Program tries to load conf-
+ * iguration from there.
+ *
+ *  * Analog Input:
+ * There is one analog input that can measure 0 to 5 V. You can get its value
+ * using GetAdcMeasurement().
+ *
+ *  * Output:
+ *  There is one 5 V HS switch (DO_2) and one LS switch (DO_1). There are macros defined in main.h
+ *  DO2_HIGH_STATE()  DO2_Z_STATE()
+ *  DO1_LOW_STATE() DO1_Z_STATE()
+ *
  * NOTE: When cache is enabled, in Middlewares/Third_Party/FatFs/src/ff.h,
  * there must be set changed lines 125 and 170:
  * 125: BYTE    win[_MAX_SS] __attribute__((aligned(32)));
@@ -172,6 +229,9 @@
                                            initialized (just to be sure on devi-
                                            ces where the reset circuit was re-
                                            moved) */
+
+#define SHARED_RAM_USB_JUMP     11  /* Address in the shared memory section that is used when
+                                       jumping to System Bootloader */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -204,6 +264,8 @@ FDCAN_HandleTypeDef hfdcan1;
 FDCAN_HandleTypeDef hfdcan2;
 
 I2C_HandleTypeDef hi2c1;
+
+IWDG_HandleTypeDef hiwdg1;
 
 SD_HandleTypeDef hsd1;
 
@@ -324,6 +386,7 @@ static void MX_SPI2_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_TIM24_Init(void);
 static void MX_DTS_Init(void);
+static void MX_IWDG1_Init(void);
 void StartDefaultTask(void *argument);
 void FatFsTask(void *argument);
 void CheckDeviceStatus(void *argument);
@@ -356,12 +419,22 @@ void jumpToBootloader(uint32_t address);
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
+    if (GetSharedData(SHARED_RAM_USB_JUMP) == 1)
+    {
+      // Should not go here - jump is to be done by the bootloader (except for the NoBootloader config)
+      SetSharedData(SHARED_RAM_USB_JUMP, 0);
+      jumpToBootloader(SYSTEM_BOOT_ADDR);
+    }
+    hiwdg1.Instance = IWDG1;
+    WDG_REFRESH();    // Watchdog might have been enabled by the bootloader
   /* USER CODE END 1 */
 
   /* MPU Configuration--------------------------------------------------------*/
   MPU_Config();
-/* Enable the CPU Cache */
+
+  /* Enable the CPU Cache */
 
   /* Enable I-Cache---------------------------------------------------------*/
   SCB_EnableICache();
@@ -381,7 +454,7 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
 
-/* Configure the peripherals common clocks */
+  /* Configure the peripherals common clocks */
   PeriphCommonClock_Config();
 
   /* USER CODE BEGIN SysInit */
@@ -408,9 +481,11 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM24_Init();
   MX_DTS_Init();
+  MX_IWDG1_Init();
   /* USER CODE BEGIN 2 */
   HAL_Delay(BOOT_DELAY);
   HAL_DTS_Start(&hdts);
+  EepromInit();
   InitNonVolatileData();
   TimestampTimerInit();
   /* Power on peripherals */
@@ -427,7 +502,7 @@ int main(void)
 
   /* Wait until all devices are ready*/
   HAL_Delay(300);
-
+  WDG_REFRESH();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -502,6 +577,7 @@ int main(void)
   osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -536,8 +612,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_LSI
+                              |RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
@@ -914,6 +992,35 @@ static void MX_I2C1_Init(void)
 }
 
 /**
+  * @brief IWDG1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_IWDG1_Init(void)
+{
+
+  /* USER CODE BEGIN IWDG1_Init 0 */
+#if 0
+  /* USER CODE END IWDG1_Init 0 */
+
+  /* USER CODE BEGIN IWDG1_Init 1 */
+
+  /* USER CODE END IWDG1_Init 1 */
+  hiwdg1.Instance = IWDG1;
+  hiwdg1.Init.Prescaler = IWDG_PRESCALER_4;
+  hiwdg1.Init.Window = 4095;
+  hiwdg1.Init.Reload = 4095;
+  if (HAL_IWDG_Init(&hiwdg1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN IWDG1_Init 2 */
+#endif
+  /* USER CODE END IWDG1_Init 2 */
+
+}
+
+/**
   * @brief SDMMC1 Initialization Function
   * @param None
   * @retval None
@@ -1060,6 +1167,7 @@ static void MX_SPI2_Init(void)
   SPI_InitStruct.CRCPoly = 0x0;
   LL_SPI_Init(SPI2, &SPI_InitStruct);
   LL_SPI_SetStandard(SPI2, LL_SPI_PROTOCOL_MOTOROLA);
+  LL_SPI_SetFIFOThreshold(SPI2, LL_SPI_FIFO_TH_01DATA);
   LL_SPI_DisableNSSPulseMgt(SPI2);
   /* USER CODE BEGIN SPI2_Init 2 */
 
@@ -1659,11 +1767,13 @@ void linTest(void)
 void TcpDataReceived(uint8_t* pData, uint16_t length)
 {
   length = length > MAX_CMD_LEN ? MAX_CMD_LEN : length;
+  SendToCan(pData, length);
 }
 
 void UdpDataReceived(uint8_t* pData, uint16_t length)
 {
   length = length > MAX_CMD_LEN ? MAX_CMD_LEN : length;
+  SendToCan(pData, length);
 }
 
 void UsbProtocolTaskRx(void* arg)
@@ -1678,7 +1788,7 @@ void UsbProtocolTaskRx(void* arg)
     /* Get received data from queue */
     while ((queueState = osMessageQueueGet(UsbRxQueueHandle, &usbRxBuffer, NULL, 0xffff)) != osOK);
     uint16_t length = usbRxBuffer.Datalen > MAX_CMD_LEN ? MAX_CMD_LEN : usbRxBuffer.Datalen;
-    UNUSED(length);
+    SendToCan(usbRxBuffer.Data, length);
   }
 }
 
@@ -1839,7 +1949,7 @@ void StartDefaultTask(void *argument)
   TcpServerInit(TcpTxQueueHandle);
   UdpServerInit();
 
-
+  WDG_REFRESH();
   //Apply values loaded from EEPROM
   ApplySwitchConfiguration(GetSwitchConfigurationAddr());
 
@@ -1850,15 +1960,21 @@ void StartDefaultTask(void *argument)
       if (READ_ETH_BOOT())
         BootloaderRequest = 2;
       /* Check jump to bootloader conditions */
-      if (BootloaderRequest == 1)
+      if (1U == BootloaderRequest)
+      {
+          (void) USBD_DeInit(&hUsbDeviceHS);
+          (void) SetSharedData(SHARED_RAM_USB_JUMP, 1);
+          HAL_NVIC_SystemReset();
         jumpToBootloader(SYSTEM_BOOT_ADDR);
-      else if (BootloaderRequest == 2)
+      }
+      else if (2U == BootloaderRequest)
       {
         InitSharedParams();
         SetSharedData(0, 1);
         jumpToBootloader(HTTP_BOOT_ADDR);
       }
-      osDelay(1000);
+      WDG_REFRESH();
+      osDelay(500);
   }
 
 
@@ -1919,7 +2035,7 @@ void CheckDeviceStatus(void *argument)
   /* USER CODE END CheckDeviceStatus */
 }
 
-/* MPU Configuration */
+ /* MPU Configuration */
 
 void MPU_Config(void)
 {

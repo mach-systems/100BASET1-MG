@@ -78,6 +78,7 @@
 #define PROTOCOL_COUNT             3  /* Number of protocols that can be used with CAN Gateway */
 #define MAX_FILTERED_CAN_IDS       15 /* Number of protocols that can be used with CAN Gateway */
 
+
 /*
  * Baud rate - 125k to 8M
  */
@@ -378,5 +379,6 @@ CanChannnelProperties * CanGetChannelProperty(uint8_t channel);
 extern CanChannelStatusTypedef Can1ChannelState;
 extern CanChannelStatusTypedef Can2ChannelState;
 
-
+/* Simple send to CAN version for SDK*/
+void SendToCan(uint8_t* pData, uint16_t length);
 #endif /* INC_CAN_H_ */

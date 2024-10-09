@@ -51,6 +51,8 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 
+extern IWDG_HandleTypeDef hiwdg1;
+
 extern osMessageQueueId_t UsbRxQueueHandle;
 extern osMessageQueueId_t UsbTxQueueHandle;
 extern osMessageQueueId_t Can1RxQueueHandle;
@@ -468,7 +470,7 @@ void SPI_TransferError_Callback(SPI_TypeDef *spi);
 #define SENSE_VBAT_MCU_DIVIDER  (3.0 / 1)
 #define SENSE_VUSB_DIVIDER      (2.0 / 1)
 #define ADC_CONVERSION(VDDA)    ((VDDA)/ 4095)   // 12 bit ADC with 3.29V reference
-
+#define WDG_REFRESH()           HAL_IWDG_Refresh(&hiwdg1)
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

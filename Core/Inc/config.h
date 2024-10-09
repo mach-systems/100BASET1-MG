@@ -124,8 +124,8 @@
 #define LIN_CONFIG_RESERVED_SIZE    108     /* 128 - 20 = 108 */
 #define SWITCH_CONFIG_RESERVED_SIZE 121     /* 128 - 27 = 121 */
 
-#define VERSION_MINOR               0x09
-#define VERSION_MAJOR               0x00
+#define VERSION_MINOR               0x00
+#define VERSION_MAJOR               0x01
 
 #define SIGNATURE_VALUE             0x55aa55aa55aa55aa
 #define PRODUCT_ID                  5
